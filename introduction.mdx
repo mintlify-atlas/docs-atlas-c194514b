@@ -1,0 +1,95 @@
+---
+title: Introduction
+description: Learn about the PDF visual regression testing CLI tool and how it helps you detect visual differences between PDF files
+---
+
+## What is PDF visual regression tester?
+
+PDF Visual Regression Tester is a Python-based command-line tool that performs visual regression testing on PDF files. It compares two PDFs page by page and generates annotated images that highlight any visual differences detected between them.
+
+The tool uses advanced image comparison algorithms to identify even subtle differences in PDF rendering, making it ideal for testing document generation systems, validating PDF transformations, and ensuring consistency across document versions.
+
+## Key features
+
+<Steps>
+  <Step title="Page-by-page comparison">
+    Compares each corresponding page of two PDF files with high-resolution rendering (144 DPI) for accurate difference detection.
+  </Step>
+  
+  <Step title="Difference highlighting">
+    Generates visual "diff" images that mark the exact areas where differences were detected with red overlay highlights.
+  </Step>
+  
+  <Step title="Command-line interface">
+    Simple and intuitive CLI that integrates easily into CI/CD pipelines and automated testing workflows.
+  </Step>
+  
+  <Step title="Smart page count handling">
+    Automatically handles PDFs with different page counts, comparing up to the shorter document's length and flagging extra pages.
+  </Step>
+  
+  <Step title="Structural similarity index">
+    Uses SSIM (Structural Similarity Index) from scikit-image for robust comparison that reduces false positives from minor rendering variations.
+  </Step>
+  
+  <Step title="JSON output">
+    Generates detailed JSON reports with timestamps, page counts, diff locations, and comparison metadata for easy integration with other tools.
+  </Step>
+</Steps>
+
+## How it works
+
+The tool leverages several powerful Python libraries to deliver accurate visual comparison:
+
+- **PyMuPDF (`fitz`)**: High-performance rendering of PDF pages into images (pixmaps)
+- **scikit-image**: Provides the `structural_similarity` function for robust image comparison that goes beyond simple pixel-by-pixel checks
+- **Pillow (PIL)**: Image manipulation for creating highlighted diff images and saving output
+- **NumPy**: Efficient array operations for image data processing
+- **ReportLab**: Used in the test suite for programmatically generating test PDFs
+
+<Note>
+  The SSIM algorithm helps reduce false positives from minor, imperceptible rendering variations that can occur between different PDF renderers or systems.
+</Note>
+
+## When to use this tool
+
+### Perfect for
+
+- **CI/CD pipelines**: Automatically verify that PDF generation code changes don't introduce visual regressions
+- **Document template testing**: Ensure template modifications produce expected visual results
+- **Cross-system validation**: Compare PDFs generated on different systems or with different libraries
+- **Version comparison**: Validate that document updates maintain expected layout and formatting
+- **Regulatory compliance**: Verify that critical documents remain visually consistent across versions
+
+### Example use cases
+
+<Accordion title="Testing invoice generation systems">
+  Compare generated invoices against reference PDFs to ensure that calculations, formatting, and layout remain consistent after code changes.
+</Accordion>
+
+<Accordion title="Validating government forms">
+  Ensure that official forms maintain exact visual specifications and compliance requirements across system updates.
+</Accordion>
+
+<Accordion title="Report generation QA">
+  Verify that automated report generation produces consistent visual output when data or templates change.
+</Accordion>
+
+<Accordion title="PDF transformation validation">
+  Test that PDF manipulation operations (merging, splitting, watermarking) produce expected visual results.
+</Accordion>
+
+## Output format
+
+When differences are found, the tool generates:
+
+1. **Diff images**: PNG files with red highlights showing exact difference locations (e.g., `diff_page_1.png`)
+2. **Extra page images**: Separate images for pages that exist in only one PDF (e.g., `extra_page_3_only_in_pdf2.png`)
+3. **Results JSON**: Detailed comparison metadata including timestamps, page counts, and diff locations
+4. **Console summary**: Human-readable summary of findings printed to stdout
+
+All outputs are saved to timestamped directories (e.g., `diff_output/20261202_171728_diff/`) to maintain comparison history.
+
+<Info>
+  The tool uses a configurable similarity threshold (default 0.999) to determine when pages are considered different. Higher thresholds are more strict.
+</Info>

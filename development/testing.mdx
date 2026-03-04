@@ -1,0 +1,294 @@
+---
+title: Testing
+description: Understand the test suite structure and how to run tests for the PDF visual diff tool
+---
+
+## Test suite overview
+
+The project uses Python's built-in `unittest` framework to ensure reliability and catch regressions. Tests are located in the `tests/` directory and cover the core comparison scenarios.
+
+## Running tests
+
+<CodeGroup>
+  ```bash Make command
+  make test
+  ```
+  
+  ```bash Direct execution
+  python3 -m unittest tests/test_diff_script.py
+  ```
+  
+  ```bash With verbose output
+  python3 -m unittest tests/test_diff_script.py -v
+  ```
+</CodeGroup>
+
+The `make test` command automatically:
+1. Sets up the test environment
+2. Generates test PDF fixtures
+3. Runs all test cases
+4. Reports results
+
+<Note>
+  Test PDFs are automatically generated on first run. If you need to regenerate them, run `make clean` followed by `make test`.
+</Note>
+
+## Test structure
+
+### Test files
+
+| File | Purpose |
+|------|--------|
+| `tests/test_diff_script.py` | Main test suite with comparison test cases |
+| `tests/create_test_pdfs.py` | Test fixture generator for PDF samples |
+| `tests/test_pdfs/` | Directory containing generated test PDFs |
+| `tests/test_output/` | Directory for test output (cleaned by `make clean`) |
+
+### Test fixtures
+
+The `create_test_pdfs.py` script generates four test PDFs using ReportLab:
+
+```python
+def create_test_pdf(filename, text_content):
+    """Creates a simple PDF for testing purposes."""
+    c = canvas.Canvas(filename, pagesize=letter)
+    c.drawString(100, 750, text_content)
+    c.showPage()
+    c.save()
+```
+
+**Generated fixtures** (`tests/create_test_pdfs.py:22-34`):
+
+<AccordionGroup>
+  <Accordion title="test1_original.pdf">
+    A simple single-page PDF with the text "This is a test."
+    
+    Used as the baseline for all comparison tests.
+  </Accordion>
+  
+  <Accordion title="test1_identical.pdf">
+    An exact duplicate of `test1_original.pdf`.
+    
+    Used to test that identical PDFs produce no differences.
+  </Accordion>
+  
+  <Accordion title="test2_different_text.pdf">
+    A single-page PDF with different text: "This is a different test."
+    
+    Used to verify that text differences are detected.
+  </Accordion>
+  
+  <Accordion title="test3_different_pages.pdf">
+    A two-page PDF where:
+    - Page 1: "This is a test." (identical to test1_original)
+    - Page 2: "Page 2" (extra page)
+    
+    Used to test handling of different page counts.
+  </Accordion>
+</AccordionGroup>
+
+## Test cases
+
+The `TestPdfVisualDiff` class contains three core test scenarios:
+
+### Test 1: Identical PDFs
+
+```python
+def test_identical_pdfs(self):
+    """Test that identical PDFs produce no differences."""
+    pdf1 = "tests/test_pdfs/test1_original.pdf"
+    pdf2 = "tests/test_pdfs/test1_identical.pdf"
+    output_dir = "tests/test_output/identical"
+    
+    result = subprocess.run(["python3", "pdf_visual_diff.py", pdf1, pdf2, "--output", output_dir], 
+                          capture_output=True, text=True)
+    
+    self.assertIn("All pages are visually identical.", result.stdout)
+    self.assertFalse(os.path.exists(output_dir) and os.listdir(output_dir))
+```
+
+**What it tests** (`tests/test_diff_script.py:14-25`):
+- Identical PDFs return success status
+- No diff images are generated
+- Correct console output message
+
+### Test 2: Different text content
+
+```python
+def test_different_text_pdfs(self):
+    """Test that PDFs with different text produce differences."""
+    pdf1 = "tests/test_pdfs/test1_original.pdf"
+    pdf2 = "tests/test_pdfs/test2_different_text.pdf"
+    output_dir = "tests/test_output/different_text"
+    
+    result = subprocess.run(["python3", "pdf_visual_diff.py", pdf1, pdf2, "--output", output_dir], 
+                          capture_output=True, text=True)
+    
+    self.assertIn("Visual differences found on pages: 1", result.stdout)
+    self.assertTrue(os.path.exists(os.path.join(output_dir, "diff_page_1.png")))
+```
+
+**What it tests** (`tests/test_diff_script.py:27-38`):
+- Text differences are detected via SSIM
+- Diff images are generated for changed pages
+- Page numbers are correctly reported
+
+### Test 3: Different page counts
+
+```python
+def test_different_page_count_pdfs(self):
+    """Test that PDFs with different page counts are handled correctly."""
+    pdf1 = "tests/test_pdfs/test1_original.pdf"
+    pdf2 = "tests/test_pdfs/test3_different_pages.pdf"
+    output_dir = "tests/test_output/different_pages"
+    
+    result = subprocess.run(["python3", "pdf_visual_diff.py", pdf1, pdf2, "--output", output_dir], 
+                          capture_output=True, text=True)
+    
+    self.assertIn("Warning: PDFs have different page counts.", result.stdout)
+    self.assertIn("All pages are visually identical.", result.stdout)
+    self.assertFalse(os.path.exists(output_dir) and os.listdir(output_dir))
+```
+
+**What it tests** (`tests/test_diff_script.py:40-53`):
+- Warning message for mismatched page counts
+- Comparison continues for overlapping pages
+- Extra pages are handled without errors
+
+## Test setup and teardown
+
+### setUp method
+
+Before each test, the suite ensures test PDFs exist:
+
+```python
+def setUp(self):
+    """Set up test files before each test."""
+    if not os.path.exists("tests/test_pdfs"):
+        subprocess.run(["python3", "tests/create_test_pdfs.py"], 
+                      capture_output=True, text=True)
+```
+
+See `tests/test_diff_script.py:7-12`
+
+### Cleanup
+
+Run `make clean` to remove all generated test files:
+
+```bash
+make clean
+```
+
+This removes:
+- `tests/test_output/` - Test execution outputs
+- `tests/test_pdfs/` - Generated fixture PDFs
+- `__pycache__/` directories
+- `diff_output/` - Default output directory
+
+See `Makefile:24-29`
+
+## Makefile targets
+
+The project includes several Make targets for development:
+
+<CodeGroup>
+  ```makefile Install dependencies
+  make install
+  # Installs packages from requirements.txt
+  ```
+  
+  ```makefile Run tests
+  make test
+  # Sets up environment and runs unittest suite
+  ```
+  
+  ```makefile Setup test environment
+  make setup
+  # Generates test PDFs without running tests
+  ```
+  
+  ```makefile Clean artifacts
+  make clean
+  # Removes all generated files and caches
+  ```
+</CodeGroup>
+
+## Adding new tests
+
+To add a new test case:
+
+<Steps>
+  <Step title="Create test fixture PDFs">
+    Add new PDF generation logic to `tests/create_test_pdfs.py`:
+    
+    ```python
+    def setup_test_files():
+        # ... existing fixtures ...
+        
+        # Add your new fixture
+        create_test_pdf("tests/test_pdfs/my_new_test.pdf", "Custom content")
+    ```
+  </Step>
+  
+  <Step title="Write test method">
+    Add a new test method to `TestPdfVisualDiff` class:
+    
+    ```python
+    def test_my_scenario(self):
+        """Test description."""
+        pdf1 = "tests/test_pdfs/test1_original.pdf"
+        pdf2 = "tests/test_pdfs/my_new_test.pdf"
+        output_dir = "tests/test_output/my_scenario"
+        
+        result = subprocess.run(
+            ["python3", "pdf_visual_diff.py", pdf1, pdf2, "--output", output_dir],
+            capture_output=True, text=True
+        )
+        
+        # Add assertions
+        self.assertIn("expected output", result.stdout)
+    ```
+  </Step>
+  
+  <Step title="Run and verify">
+    Execute your new test:
+    
+    ```bash
+    make clean
+    make test
+    ```
+  </Step>
+</Steps>
+
+## Test coverage
+
+The current test suite covers:
+
+- ✅ Identical PDF comparison
+- ✅ Text content differences
+- ✅ Different page count handling
+- ✅ Output directory creation
+- ✅ Console output messages
+- ✅ Diff image generation
+
+### Coverage gaps
+
+Areas that could benefit from additional testing:
+
+- Custom SSIM threshold values
+- Different page dimensions
+- Image-heavy PDFs
+- Multi-page diff scenarios
+- JSON output validation
+- Performance with large PDFs
+- Edge cases (empty PDFs, corrupted files)
+
+<Note>
+  Consider using `coverage.py` to measure code coverage:
+  
+  ```bash
+  pip install coverage
+  coverage run -m unittest tests/test_diff_script.py
+  coverage report -m
+  ```
+</Note>

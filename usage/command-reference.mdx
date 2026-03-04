@@ -1,0 +1,238 @@
+---
+title: Command reference
+description: Complete reference for all pdf-visual-diff command-line arguments
+---
+
+## Synopsis
+
+```bash
+python pdf_visual_diff.py <pdf1> <pdf2> [--output OUTPUT] [--threshold THRESHOLD]
+```
+
+## Positional arguments
+
+<ParamField path="pdf1" type="string" required>
+  Path to the first PDF file to compare.
+  
+  This serves as the baseline or reference document. Can be an absolute or relative path.
+  
+  **Example:**
+  ```bash
+  python pdf_visual_diff.py baseline.pdf updated.pdf
+  ```
+</ParamField>
+
+<ParamField path="pdf2" type="string" required>
+  Path to the second PDF file to compare.
+  
+  This is compared against `pdf1` to detect visual differences.
+  
+  **Example:**
+  ```bash
+  python pdf_visual_diff.py baseline.pdf updated.pdf
+  ```
+</ParamField>
+
+## Optional arguments
+
+<ParamField path="--output" type="string" default="diff_output">
+  Directory to save difference images and results.
+  
+  A timestamped subdirectory will be created within this path for each comparison run. The timestamp format is `YYYYDDMM_HHMMSS`.
+  
+  **Function signature:** `compare_pdfs:15`
+  ```python
+  output_dir = os.path.join(output_dir, f"{timestamp}_diff")
+  ```
+  
+  **Examples:**
+  ```bash
+  # Use default output directory
+  python pdf_visual_diff.py doc1.pdf doc2.pdf
+  # Creates: diff_output/20260304_143052_diff/
+  
+  # Custom output directory
+  python pdf_visual_diff.py doc1.pdf doc2.pdf --output ./reports
+  # Creates: reports/20260304_143052_diff/
+  
+  # Absolute path
+  python pdf_visual_diff.py doc1.pdf doc2.pdf --output /var/log/pdf-diffs
+  # Creates: /var/log/pdf-diffs/20260304_143052_diff/
+  ```
+  
+  <Note>
+  The output directory is created automatically if it doesn't exist. See `pdf_visual_diff.py:16-17`.
+  </Note>
+</ParamField>
+
+<ParamField path="--threshold" type="float" default="1">
+  Similarity threshold for SSIM (Structural Similarity Index) comparison.
+  
+  Valid range: `0.0` to `1.0`
+  
+  - `1.0` = Requires pixel-perfect match (strictest)
+  - `0.999` = Internal default used in comparison logic (`pdf_visual_diff.py:10`)
+  - `0.95` = Tolerates minor rendering differences
+  - Lower values = More tolerant of differences
+  
+  Pages with SSIM scores below this threshold are flagged as different.
+  
+  **Function signature:** `compare_pdfs:10`
+  ```python
+  def compare_pdfs(pdf1_path, pdf2_path, output_dir, threshold=0.999):
+  ```
+  
+  **Comparison logic:** `pdf_visual_diff.py:56`
+  ```python
+  if similarity < threshold:
+      diff_pages.append(i + 1)
+  ```
+  
+  **Examples:**
+  ```bash
+  # Default threshold (very strict)
+  python pdf_visual_diff.py doc1.pdf doc2.pdf
+  
+  # Detect subtle differences
+  python pdf_visual_diff.py doc1.pdf doc2.pdf --threshold 0.999
+  
+  # More tolerant (good for testing)
+  python pdf_visual_diff.py doc1.pdf doc2.pdf --threshold 0.95
+  
+  # Very tolerant
+  python pdf_visual_diff.py doc1.pdf doc2.pdf --threshold 0.85
+  ```
+  
+  <Warning>
+  The CLI argument default is `1`, but the function default is `0.999`. When not specified, the CLI passes `1` to the function, overriding the function's default.
+  </Warning>
+</ParamField>
+
+## Help and version
+
+<ParamField path="-h, --help">
+  Show help message and exit.
+  
+  ```bash
+  python pdf_visual_diff.py --help
+  ```
+  
+  Output:
+  ```
+  usage: pdf_visual_diff.py [-h] [--output OUTPUT] [--threshold THRESHOLD]
+                           pdf1 pdf2
+
+  Compare two PDFs for visual differences.
+
+  positional arguments:
+    pdf1                  Path to the first PDF file.
+    pdf2                  Path to the second PDF file.
+
+  optional arguments:
+    -h, --help            show this help message and exit
+    --output OUTPUT       Directory to save difference images.
+    --threshold THRESHOLD
+                          Similarity threshold for SSIM (0.0 to 1.0).
+  ```
+</ParamField>
+
+## Exit codes
+
+The tool uses standard Python exit codes:
+
+| Code | Meaning |
+|------|----------|
+| `0`  | Successful execution (both identical and different PDFs) |
+| `1`  | Runtime error (file not found, invalid PDF, etc.) |
+| `2`  | Command-line argument error |
+
+<Note>
+The tool does NOT use different exit codes for identical vs. different PDFs. Check the `results.json` file or parse stdout to determine comparison results programmatically.
+</Note>
+
+## Complete examples
+
+<CodeGroup>
+```bash Minimal usage
+python pdf_visual_diff.py baseline.pdf updated.pdf
+```
+
+```bash Custom output
+python pdf_visual_diff.py \
+  reports/january.pdf \
+  reports/february.pdf \
+  --output ./monthly-diffs
+```
+
+```bash Sensitive comparison
+python pdf_visual_diff.py \
+  original.pdf \
+  modified.pdf \
+  --threshold 0.95 \
+  --output ./detailed-analysis
+```
+
+```bash CI/CD integration
+#!/bin/bash
+set -e
+
+# Generate baseline
+python generate_report.py --output baseline.pdf
+
+# Make changes and regenerate
+update_data.sh
+python generate_report.py --output updated.pdf
+
+# Compare
+python pdf_visual_diff.py \
+  baseline.pdf \
+  updated.pdf \
+  --output ci_results \
+  --threshold 0.999
+
+# Check results
+if grep -q '"identical": true' ci_results/*/results.json; then
+  echo "✓ PDFs are identical"
+  exit 0
+else
+  echo "✗ Visual differences detected"
+  cat ci_results/*/results.json
+  exit 1
+fi
+```
+</CodeGroup>
+
+## Implementation details
+
+### Argument parsing
+
+The CLI uses Python's `argparse` module. See `pdf_visual_diff.py:137-145`:
+
+```python
+def main():
+    parser = argparse.ArgumentParser(description="Compare two PDFs for visual differences.")
+    parser.add_argument("pdf1", help="Path to the first PDF file.")
+    parser.add_argument("pdf2", help="Path to the second PDF file.")
+    parser.add_argument("--output", default="diff_output", help="Directory to save difference images.")
+    parser.add_argument("--threshold", type=float, default=1, help="Similarity threshold for SSIM (0.0 to 1.0).")
+    args = parser.parse_args()
+
+    compare_pdfs(args.pdf1, args.pdf2, args.output, args.threshold)
+```
+
+### Function signature
+
+The underlying comparison function (`pdf_visual_diff.py:10`):
+
+```python
+def compare_pdfs(pdf1_path, pdf2_path, output_dir, threshold=0.999):
+    """
+    Compares two PDFs page by page for visual differences.
+    """
+```
+
+## See also
+
+- [Configuration options](/usage/configuration-options) - Detailed guide for threshold and output settings
+- [Output formats](/usage/output-formats) - Understanding generated files
+- [Basic comparison](/usage/basic-comparison) - Getting started guide

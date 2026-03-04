@@ -1,0 +1,204 @@
+---
+title: Advanced scenarios
+description: Handle edge cases including page count mismatches, size differences, and threshold tuning
+---
+
+## Page count mismatches
+
+When comparing PDFs with different numbers of pages, the tool handles this gracefully.
+
+### Scenario: Extra pages in one PDF
+
+```bash
+python pdf_visual_diff.py example-pdfs/test1_original.pdf example-pdfs/test3_different_pages.pdf
+```
+
+### Output behavior
+
+```bash
+Warning: PDFs have different page counts. PDF1: 1 pages, PDF2: 2 pages.
+Comparing up to the lower page count.
+Extra pages only in PDF2: 2
+Diff images saved to: /path/to/diff_output/20261202_171728_diff/
+```
+
+### Generated files
+
+For extra pages, the tool saves snapshots with descriptive filenames:
+
+```bash
+diff_output/20261202_171728_diff/
+├── extra_page_2_only_in_pdf2.png
+└── results.json
+```
+
+<Note>
+  The tool compares pages up to the minimum page count, then separately captures any extra pages from the longer PDF.
+</Note>
+
+### Results JSON structure
+
+```json
+{
+  "timestamp": "20261202_171728",
+  "status": "error",
+  "description": "Extra pages only in PDF2: 2",
+  "pdf1": "/absolute/path/to/test1_original.pdf",
+  "pdf2": "/absolute/path/to/test3_different_pages.pdf",
+  "pdf1_pages": 1,
+  "pdf2_pages": 2,
+  "threshold": 1,
+  "identical": false,
+  "diff_pages": [],
+  "extra_pages": [2],
+  "extra_pages_in": "PDF2"
+}
+```
+
+## Page size mismatches
+
+The tool automatically handles PDFs with different page dimensions.
+
+### How it works
+
+From the source code (pdf_visual_diff.py:45-47):
+
+```python
+if pil_img1.size != pil_img2.size:
+    # Resize images to be the same size for comparison
+    pil_img2 = pil_img2.resize(pil_img1.size, Image.LANCZOS)
+```
+
+<Accordion title="Why resize?">
+  The Structural Similarity Index (SSIM) requires both images to have identical dimensions. The tool resizes the second PDF's pages to match the first PDF's dimensions using high-quality LANCZOS resampling.
+</Accordion>
+
+### Important considerations
+
+<CodeGroup>
+```bash Same content, different sizes
+# These PDFs contain identical content but different page sizes
+python pdf_visual_diff.py letter-size.pdf a4-size.pdf
+```
+
+```bash Expected behavior
+# May show minor differences due to resampling
+Visual differences found on pages: 1, 2, 3
+Diff images saved to: /path/to/diff_output/20261202_171728_diff/
+```
+</CodeGroup>
+
+<Note>
+  Resizing can introduce minor visual artifacts. For best results, ensure both PDFs use the same page dimensions.
+</Note>
+
+## Tuning the similarity threshold
+
+The SSIM threshold controls how sensitive the comparison is. The default is `1.0` (exact match).
+
+### Understanding SSIM values
+
+The Structural Similarity Index ranges from 0.0 to 1.0:
+
+- **1.0**: Perfect match
+- **0.999**: Nearly identical (minor rendering differences)
+- **0.95**: Noticeable differences
+- **0.5**: Significant differences
+- **0.0**: Completely different
+
+### Adjusting sensitivity
+
+```bash
+# More tolerant (ignores minor rendering variations)
+python pdf_visual_diff.py file1.pdf file2.pdf --threshold 0.999
+```
+
+```bash
+# Default behavior (exact match required)
+python pdf_visual_diff.py file1.pdf file2.pdf --threshold 1
+```
+
+### When to adjust the threshold
+
+<Accordion title="Font rendering differences">
+  Different systems may render fonts slightly differently. If you're seeing false positives from font anti-aliasing, try `--threshold 0.999`.
+</Accordion>
+
+<Accordion title="PDF generation variations">
+  Some PDF libraries introduce minor pixel differences even when content is identical. A threshold of `0.995` to `0.999` can help filter these out.
+</Accordion>
+
+<Accordion title="Intentional visual changes">
+  Keep the default `1.0` threshold when you want to catch even the smallest visual differences during regression testing.
+</Accordion>
+
+### Example: Filtering rendering artifacts
+
+```bash
+# With default threshold (1.0)
+python pdf_visual_diff.py reference.pdf generated.pdf
+```
+
+```bash
+Visual differences found on pages: 1, 2, 3, 4, 5
+Diff images saved to: /path/to/diff_output/20261202_171728_diff/
+```
+
+```bash
+# With relaxed threshold (0.999)
+python pdf_visual_diff.py reference.pdf generated.pdf --threshold 0.999
+```
+
+```bash
+All pages are visually identical.
+```
+
+<Note>
+  The threshold is applied per-page. Each page's SSIM score must meet or exceed the threshold to be considered identical.
+</Note>
+
+## Combining multiple options
+
+You can combine output directory and threshold settings:
+
+```bash
+python pdf_visual_diff.py \
+  original.pdf \
+  modified.pdf \
+  --output regression_tests/run_1 \
+  --threshold 0.999
+```
+
+## High-resolution rendering
+
+The tool renders PDFs at 2x zoom (144 DPI) for better difference detection:
+
+```python
+zoom = 2  # DPI = 144
+mat = fitz.Matrix(zoom, zoom)
+```
+
+This ensures that small visual differences are captured accurately in the diff images.
+
+## Batch testing workflow
+
+For CI/CD pipelines, you might want to test multiple PDF pairs:
+
+```bash
+#!/bin/bash
+
+for test_case in test_cases/*.json; do
+  pdf1=$(jq -r '.reference' "$test_case")
+  pdf2=$(jq -r '.generated' "$test_case")
+  threshold=$(jq -r '.threshold' "$test_case")
+  
+  echo "Testing: $test_case"
+  python pdf_visual_diff.py "$pdf1" "$pdf2" \
+    --output "results/$(basename "$test_case" .json)" \
+    --threshold "$threshold"
+done
+```
+
+<Accordion title="Exit codes">
+  The tool doesn't currently return specific exit codes for failures. Check the `results.json` file's `status` field to determine test outcomes programmatically.
+</Accordion>

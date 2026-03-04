@@ -1,0 +1,373 @@
+---
+title: Configuration options
+description: Detailed guide to configuring pdf-visual-diff threshold and output settings
+---
+
+## Overview
+
+The pdf-visual-diff tool provides two main configuration options:
+
+1. **Similarity threshold** - Controls how strict the visual comparison is
+2. **Output directory** - Specifies where results are saved
+
+Unlike many CLI tools, pdf-visual-diff does not use configuration files. All settings are passed as command-line arguments.
+
+## Similarity threshold
+
+The `--threshold` parameter controls the sensitivity of visual difference detection using the Structural Similarity Index (SSIM).
+
+### How SSIM works
+
+SSIM is computed for each pair of pages and returns a score between 0 and 1:
+
+- `1.0` = Identical images
+- `0.9` = Very similar (minor differences)
+- `0.7` = Moderately similar
+- `0.5` = Significantly different
+- `0.0` = Completely different
+
+**Implementation:** `pdf_visual_diff.py:54`
+```python
+similarity = ssim(np_img1, np_img2, channel_axis=-1, data_range=255)
+```
+
+### Threshold comparison logic
+
+Pages are flagged as different when their SSIM score falls **below** the threshold:
+
+**Source:** `pdf_visual_diff.py:56-57`
+```python
+if similarity < threshold:
+    diff_pages.append(i + 1)
+```
+
+<Note>
+A page with SSIM = 0.998 and threshold = 0.999 **will be flagged** as different because 0.998 < 0.999.
+</Note>
+
+### Choosing the right threshold
+
+<Tabs>
+  <Tab title="Use case: Regression testing">
+    **Recommended threshold:** `0.999` or `1.0`
+    
+    ```bash
+    python pdf_visual_diff.py baseline.pdf updated.pdf --threshold 0.999
+    ```
+    
+    Best for:
+    - Automated testing pipelines
+    - Detecting unintended changes
+    - Verifying pixel-perfect output
+    
+    Will flag:
+    - Any visual change, no matter how small
+    - Anti-aliasing differences
+    - Font rendering variations
+  </Tab>
+  
+  <Tab title="Use case: Content verification">
+    **Recommended threshold:** `0.95` to `0.98`
+    
+    ```bash
+    python pdf_visual_diff.py doc1.pdf doc2.pdf --threshold 0.97
+    ```
+    
+    Best for:
+    - Comparing documents with expected minor differences
+    - Cross-platform rendering comparisons
+    - Verifying content while ignoring artifacts
+    
+    Will ignore:
+    - Minor font rendering differences
+    - Small anti-aliasing variations
+    - Compression artifacts
+  </Tab>
+  
+  <Tab title="Use case: Layout verification">
+    **Recommended threshold:** `0.85` to `0.95`
+    
+    ```bash
+    python pdf_visual_diff.py old.pdf new.pdf --threshold 0.90
+    ```
+    
+    Best for:
+    - Verifying overall layout remains consistent
+    - Detecting major structural changes
+    - Comparing with expected styling updates
+    
+    Will ignore:
+    - Font changes
+    - Color variations
+    - Minor spacing differences
+  </Tab>
+</Tabs>
+
+### Default values
+
+There is an important distinction between CLI and function defaults:
+
+<CodeGroup>
+```python CLI default (pdf_visual_diff.py:142)
+parser.add_argument("--threshold", type=float, default=1, ...)
+```
+
+```python Function default (pdf_visual_diff.py:10)
+def compare_pdfs(pdf1_path, pdf2_path, output_dir, threshold=0.999):
+```
+</CodeGroup>
+
+<Warning>
+When using the CLI **without** specifying `--threshold`, the value `1` is passed to the function, overriding the function's default of `0.999`.
+
+When calling `compare_pdfs()` directly in Python **without** specifying threshold, the value `0.999` is used.
+</Warning>
+
+### Threshold examples
+
+<Accordion title="Example 1: Strict comparison (pixel-perfect)">
+```bash
+python pdf_visual_diff.py invoice_v1.pdf invoice_v2.pdf --threshold 1.0
+```
+
+**Scenario:** Comparing invoices where even a single pixel difference matters.
+
+**Result:** Any visual change, including:
+- Date changes
+- Amount updates
+- Font smoothing differences
+- Compression artifacts
+
+Will all be flagged as differences.
+</Accordion>
+
+<Accordion title="Example 2: Balanced comparison">
+```bash
+python pdf_visual_diff.py report_mac.pdf report_linux.pdf --threshold 0.97
+```
+
+**Scenario:** Comparing the same report generated on different operating systems.
+
+**Result:** Ignores minor rendering differences while catching:
+- Text changes
+- Layout shifts
+- Image differences
+- Color variations
+</Accordion>
+
+<Accordion title="Example 3: Layout-only comparison">
+```bash
+python pdf_visual_diff.py mockup_v1.pdf mockup_v2.pdf --threshold 0.88
+```
+
+**Scenario:** Verifying that a redesign maintains the same general layout structure.
+
+**Result:** Ignores styling changes while catching:
+- Element repositioning
+- Size changes
+- Removed/added sections
+</Accordion>
+
+### Debugging threshold issues
+
+If you're getting unexpected results, check the SSIM values in the results.json file:
+
+```bash
+python pdf_visual_diff.py doc1.pdf doc2.pdf --threshold 0.95
+cat diff_output/*/results.json
+```
+
+<Note>
+The results.json file stores the threshold used but not individual page SSIM scores. To see actual SSIM values, you'll need to modify the source code to log them.
+</Note>
+
+## Output directory configuration
+
+The `--output` parameter specifies where results are saved.
+
+### Directory structure
+
+The tool creates a timestamped subdirectory for each run:
+
+**Implementation:** `pdf_visual_diff.py:14-17`
+```python
+timestamp = datetime.now().strftime("%Y%d%m_%H%M%S")
+output_dir = os.path.join(output_dir, f"{timestamp}_diff")
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
+```
+
+**Example structure:**
+```
+diff_output/
+├── 20260304_143052_diff/
+│   ├── diff_page_1.png
+│   ├── diff_page_3.png
+│   └── results.json
+└── 20260304_145633_diff/
+    ├── diff_page_2.png
+    └── results.json
+```
+
+### Output directory examples
+
+<CodeGroup>
+```bash Default
+python pdf_visual_diff.py doc1.pdf doc2.pdf
+# Creates: diff_output/20260304_143052_diff/
+```
+
+```bash Relative path
+python pdf_visual_diff.py doc1.pdf doc2.pdf --output ./reports
+# Creates: reports/20260304_143052_diff/
+```
+
+```bash Absolute path
+python pdf_visual_diff.py doc1.pdf doc2.pdf --output /var/log/pdf-diffs
+# Creates: /var/log/pdf-diffs/20260304_143052_diff/
+```
+
+```bash Nested structure
+python pdf_visual_diff.py doc1.pdf doc2.pdf --output results/$(date +%Y-%m-%d)
+# Creates: results/2026-03-04/20260304_143052_diff/
+```
+</CodeGroup>
+
+### Timestamp format
+
+The timestamp uses the format `YYYYDDMM_HHMMSS`:
+
+- `YYYY` = 4-digit year
+- `DD` = 2-digit day
+- `MM` = 2-digit month
+- `HH` = 2-digit hour (24-hour format)
+- `MM` = 2-digit minute
+- `SS` = 2-digit second
+
+<Warning>
+The timestamp format has an unusual order: Year-Day-Month instead of Year-Month-Day. This is defined in `pdf_visual_diff.py:14`:
+
+```python
+timestamp = datetime.now().strftime("%Y%d%m_%H%M%S")
+```
+
+For example, March 4, 2026 at 2:30:52 PM becomes `20260403_143052` (year-day-month).
+</Warning>
+
+### Output file types
+
+The output directory contains:
+
+1. **Diff images** - PNG files showing visual differences
+   - Named: `diff_page_N.png` where N is the page number
+   - Generated for pages below threshold
+   
+2. **Extra page images** - PNG files for pages in only one PDF
+   - Named: `extra_page_N_only_in_pdfX.png`
+   - Generated when PDFs have different page counts
+   
+3. **Results file** - JSON file with comparison metadata
+   - Named: `results.json`
+   - Always generated
+
+See [Output formats](/usage/output-formats) for detailed information.
+
+### Managing output
+
+<Accordion title="Cleaning old results">
+```bash
+# Remove all output directories older than 7 days
+find diff_output -type d -name "*_diff" -mtime +7 -exec rm -rf {} +
+```
+</Accordion>
+
+<Accordion title="Organizing by project">
+```bash
+# Use project-specific output directories
+python pdf_visual_diff.py \
+  project_a/doc.pdf \
+  project_a/doc_new.pdf \
+  --output results/project_a
+
+python pdf_visual_diff.py \
+  project_b/doc.pdf \
+  project_b/doc_new.pdf \
+  --output results/project_b
+```
+</Accordion>
+
+<Accordion title="CI/CD artifact collection">
+```bash
+# Run comparison
+python pdf_visual_diff.py baseline.pdf updated.pdf --output ci_results
+
+# Find the latest result directory
+LATEST=$(ls -td ci_results/*_diff | head -1)
+
+# Archive for CI artifacts
+tar -czf diff-artifacts.tar.gz "$LATEST"
+```
+</Accordion>
+
+## Advanced configuration patterns
+
+### Environment-based settings
+
+```bash
+#!/bin/bash
+
+# Set defaults based on environment
+if [ "$ENV" = "production" ]; then
+  THRESHOLD=0.999
+  OUTPUT="/var/log/pdf-diffs"
+elif [ "$ENV" = "staging" ]; then
+  THRESHOLD=0.95
+  OUTPUT="./staging-diffs"
+else
+  THRESHOLD=0.90
+  OUTPUT="./dev-diffs"
+fi
+
+python pdf_visual_diff.py \
+  "$1" \
+  "$2" \
+  --threshold "$THRESHOLD" \
+  --output "$OUTPUT"
+```
+
+### Wrapper script with presets
+
+```bash
+#!/bin/bash
+# compare-pdfs.sh - Wrapper with named presets
+
+case "$3" in
+  strict)
+    THRESHOLD=1.0
+    ;;
+  normal)
+    THRESHOLD=0.95
+    ;;
+  loose)
+    THRESHOLD=0.85
+    ;;
+  *)
+    echo "Usage: $0 <pdf1> <pdf2> <strict|normal|loose>"
+    exit 1
+    ;;
+esac
+
+python pdf_visual_diff.py "$1" "$2" --threshold "$THRESHOLD" --output "./results_$3"
+```
+
+Usage:
+```bash
+./compare-pdfs.sh baseline.pdf updated.pdf strict
+./compare-pdfs.sh report1.pdf report2.pdf normal
+```
+
+## See also
+
+- [Command reference](/usage/command-reference) - Complete CLI argument documentation
+- [Output formats](/usage/output-formats) - Understanding generated files
+- [Basic comparison](/usage/basic-comparison) - Getting started guide

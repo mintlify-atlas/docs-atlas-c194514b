@@ -1,97 +1,201 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "PDF Visual Regression Documentation"
+description: "Detect visual differences in PDF files with powerful page-by-page comparison and SSIM-based diff highlighting"
+mode: "custom"
 ---
 
-## Setting up
+<div className="relative overflow-hidden bg-gradient-to-br from-[#1D3557] via-[#2A4A6F] to-[#1D3557] dark:from-[#0f1117] dark:via-[#1a1d27] dark:to-[#0f1117] py-20">
+  <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(230,57,70,0.1),transparent_50%)]"></div>
+  <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(241,250,238,0.05),transparent_50%)]"></div>
+  
+  <div className="relative max-w-6xl mx-auto px-6 lg:px-8">
+    <div className="grid lg:grid-cols-12 gap-12 items-center">
+      <div className="lg:col-span-7">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">
+          Detect visual changes in PDFs with confidence
+        </h1>
+        <p className="text-lg sm:text-xl text-gray-200 dark:text-gray-300 max-w-2xl mb-8">
+          A Python CLI tool that performs precise page-by-page visual regression testing on PDF files using structural similarity algorithms and generates highlighted diff images.
+        </p>
+        <div className="flex flex-wrap gap-4">
+          <a 
+            href="/quickstart" 
+            className="inline-flex items-center px-6 py-3 text-base font-semibold text-white bg-[#E63946] hover:bg-[#D62839] rounded-lg transition-colors duration-200 no-underline"
+          >
+            Get Started
+            <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </a>
+          <a 
+            href="/usage/command-reference" 
+            className="inline-flex items-center px-6 py-3 text-base font-semibold text-white border border-white/30 bg-white/10 hover:bg-white/20 rounded-lg transition-colors duration-200 no-underline"
+          >
+            Command Reference
+          </a>
+        </div>
+      </div>
+      
+      <div className="lg:col-span-5 hidden lg:block">
+        <div className="relative">
+          <div className="absolute inset-0 bg-[#E63946]/20 blur-3xl rounded-full"></div>
+          <div className="relative bg-[#1a1d27] dark:bg-[#242838] rounded-2xl p-6 border border-[#27272a] shadow-2xl">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-3 h-3 rounded-full bg-[#E63946]"></div>
+              <div className="w-3 h-3 rounded-full bg-[#F1FAEE]"></div>
+              <div className="w-3 h-3 rounded-full bg-[#1D3557]"></div>
+            </div>
+            <pre className="text-sm text-gray-300"><code>{`$ python pdf_visual_diff.py \\
+    original.pdf updated.pdf
 
-Get your documentation site up and running in minutes.
+Visual differences found on pages: 2, 5
+Diff images saved to:
+  diff_output/20260304_112045_diff/`}</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white mb-4">
+    Quick start
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Get up and running in less than a minute
+  </p>
+  
+  <Steps>
+    <Step title="Install dependencies">
+      Clone the repository and install the required Python packages:
+      
+      ```bash
+      git clone https://github.com/DilwoarH/pdf-visual-regression
+      cd pdf-visual-regression
+      pip install -r requirements.txt
+      ```
+    </Step>
+    
+    <Step title="Run your first comparison">
+      Compare two PDF files to detect visual differences:
+      
+      ```bash
+      python pdf_visual_diff.py original.pdf updated.pdf
+      ```
+      
+      The tool will analyze each page and generate highlighted diff images showing exactly where visual changes occurred.
+    </Step>
+    
+    <Step title="View the results">
+      Check the output directory for your diff images:
+      
+      ```bash
+      ls diff_output/
+      ```
+      
+      Each difference is saved as a PNG with visual highlights marking changed regions.
+    </Step>
+  </Steps>
+</div>
 
-## Make it yours
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white mb-4">
+    Explore by topic
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Find what you need in our comprehensive documentation
+  </p>
+  
+  <CardGroup cols={2}>
+    <Card title="Installation" icon="download" href="/installation">
+      Set up your environment and install all dependencies
+    </Card>
+    <Card title="Basic comparison" icon="code-compare" href="/usage/basic-comparison">
+      Learn the fundamentals of comparing PDFs
+    </Card>
+    <Card title="Command reference" icon="terminal" href="/usage/command-reference">
+      Complete CLI options and parameters
+    </Card>
+    <Card title="Configuration options" icon="sliders" href="/usage/configuration-options">
+      Customize threshold and output settings
+    </Card>
+    <Card title="Examples" icon="book-open" href="/examples/basic-examples">
+      Real-world usage patterns and scenarios
+    </Card>
+    <Card title="How it works" icon="gears" href="/development/how-it-works">
+      Understand the SSIM algorithm and architecture
+    </Card>
+  </CardGroup>
+</div>
 
-Design a docs site that looks great and empowers your users.
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white mb-4">
+    Key features
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Everything you need for visual regression testing
+  </p>
+  
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="p-6 rounded-xl border border-gray-200 dark:border-[#27272a] bg-white dark:bg-[#1a1d27]">
+      <div className="w-12 h-12 rounded-lg bg-[#E63946]/10 dark:bg-[#E63946]/20 flex items-center justify-center mb-4">
+        <svg className="w-6 h-6 text-[#E63946]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Page-by-page comparison</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">Compare each page independently and identify exactly which pages have changed</p>
+    </div>
+    
+    <div className="p-6 rounded-xl border border-gray-200 dark:border-[#27272a] bg-white dark:bg-[#1a1d27]">
+      <div className="w-12 h-12 rounded-lg bg-[#E63946]/10 dark:bg-[#E63946]/20 flex items-center justify-center mb-4">
+        <svg className="w-6 h-6 text-[#E63946]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">SSIM algorithm</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">Structural similarity detection reduces false positives from minor rendering variations</p>
+    </div>
+    
+    <div className="p-6 rounded-xl border border-gray-200 dark:border-[#27272a] bg-white dark:bg-[#1a1d27]">
+      <div className="w-12 h-12 rounded-lg bg-[#E63946]/10 dark:bg-[#E63946]/20 flex items-center justify-center mb-4">
+        <svg className="w-6 h-6 text-[#E63946]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Visual diff images</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">Automatically generated images with highlighted regions show exactly what changed</p>
+    </div>
+    
+    <div className="p-6 rounded-xl border border-gray-200 dark:border-[#27272a] bg-white dark:bg-[#1a1d27]">
+      <div className="w-12 h-12 rounded-lg bg-[#E63946]/10 dark:bg-[#E63946]/20 flex items-center justify-center mb-4">
+        <svg className="w-6 h-6 text-[#E63946]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Configurable thresholds</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">Adjust sensitivity to match your testing requirements</p>
+    </div>
+  </div>
+</div>
 
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
-  </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
-  </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
-  </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
-
-## Create beautiful pages
-
-Everything you need to create world-class documentation.
-
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
-
-## Need inspiration?
-
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="rounded-2xl border border-gray-200 dark:border-[#27272a] bg-gradient-to-br from-[#E63946]/5 to-[#1D3557]/5 dark:from-[#E63946]/10 dark:to-[#1D3557]/10 p-8 sm:p-12">
+    <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white mb-4">
+      Ready to start testing?
+    </h2>
+    <p className="text-base text-gray-600 dark:text-gray-400 mb-6 max-w-2xl">
+      Follow our quickstart guide to install dependencies and run your first PDF comparison in under a minute.
+    </p>
+    <a 
+      href="/quickstart" 
+      className="inline-flex items-center px-6 py-3 text-base font-semibold text-white bg-[#E63946] hover:bg-[#D62839] rounded-lg transition-colors duration-200 no-underline"
+    >
+      Get Started Now
+      <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+      </svg>
+    </a>
+  </div>
+</div>

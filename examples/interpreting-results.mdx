@@ -1,0 +1,338 @@
+---
+title: Interpreting results
+description: Understand the results.json structure, diff image visualization, and SSIM scores
+---
+
+## The results.json file
+
+Every comparison generates a `results.json` file containing detailed metadata about the test run.
+
+### Successful comparison (identical PDFs)
+
+```json
+{
+  "timestamp": "20261202_171728",
+  "status": "success",
+  "description": "All pages are visually identical.",
+  "pdf1": "/absolute/path/to/pdf1.pdf",
+  "pdf2": "/absolute/path/to/pdf2.pdf",
+  "pdf1_pages": 3,
+  "pdf2_pages": 3,
+  "threshold": 1,
+  "identical": true,
+  "diff_pages": [],
+  "extra_pages": [],
+  "extra_pages_in": null
+}
+```
+
+### Failed comparison (differences found)
+
+```json
+{
+  "timestamp": "20261202_171728",
+  "status": "error",
+  "description": "Visual differences found on pages: 1, 3",
+  "pdf1": "/absolute/path/to/original.pdf",
+  "pdf2": "/absolute/path/to/modified.pdf",
+  "pdf1_pages": 5,
+  "pdf2_pages": 5,
+  "threshold": 1,
+  "identical": false,
+  "diff_pages": [1, 3],
+  "extra_pages": [],
+  "extra_pages_in": null
+}
+```
+
+### Page count mismatch
+
+```json
+{
+  "timestamp": "20261202_171728",
+  "status": "error",
+  "description": "Visual differences found on pages: 2 Extra pages only in PDF1: 4, 5",
+  "pdf1": "/absolute/path/to/longer.pdf",
+  "pdf2": "/absolute/path/to/shorter.pdf",
+  "pdf1_pages": 5,
+  "pdf2_pages": 3,
+  "threshold": 1,
+  "identical": false,
+  "diff_pages": [2],
+  "extra_pages": [4, 5],
+  "extra_pages_in": "PDF1"
+}
+```
+
+## Field reference
+
+<Accordion title="timestamp">
+  The timestamp when the comparison was run, in `YYYYMMDD_HHMMSS` format. This matches the output directory name.
+</Accordion>
+
+<Accordion title="status">
+  Either `"success"` (all pages identical) or `"error"` (differences found). Use this field for automated test assertions.
+  
+  ```python
+  import json
+  
+  with open('diff_output/results.json') as f:
+      results = json.load(f)
+      assert results['status'] == 'success', f"Visual regression detected: {results['description']}"
+  ```
+</Accordion>
+
+<Accordion title="description">
+  A human-readable summary of the comparison results. Examples:
+  - `"All pages are visually identical."`
+  - `"Visual differences found on pages: 1, 3"`
+  - `"Visual differences found on pages: 2 Extra pages only in PDF1: 4, 5"`
+</Accordion>
+
+<Accordion title="pdf1 / pdf2">
+  Absolute paths to the compared PDF files. Useful for tracing back to source files in automated systems.
+</Accordion>
+
+<Accordion title="pdf1_pages / pdf2_pages">
+  The number of pages in each PDF. When these differ, a warning is printed during comparison.
+</Accordion>
+
+<Accordion title="threshold">
+  The SSIM threshold used for the comparison (default: `1.0`). Pages with SSIM scores below this value are flagged as different.
+</Accordion>
+
+<Accordion title="identical">
+  Boolean indicating whether the PDFs are visually identical. This is `true` only when both `diff_pages` and `extra_pages` are empty.
+</Accordion>
+
+<Accordion title="diff_pages">
+  Array of page numbers (1-indexed) where visual differences were detected. Empty if no differences found.
+</Accordion>
+
+<Accordion title="extra_pages">
+  Array of page numbers that exist in only one PDF. Empty if both PDFs have the same page count.
+</Accordion>
+
+<Accordion title="extra_pages_in">
+  Either `"PDF1"`, `"PDF2"`, or `null`. Indicates which PDF contains the extra pages.
+</Accordion>
+
+## Understanding diff images
+
+### Image naming convention
+
+Diff images follow these naming patterns:
+
+- `diff_page_1.png` - Visual differences found on page 1
+- `diff_page_2.png` - Visual differences found on page 2
+- `extra_page_4_only_in_pdf1.png` - Page 4 exists only in PDF1
+- `extra_page_3_only_in_pdf2.png` - Page 3 exists only in PDF2
+
+### Visual highlighting explained
+
+The tool uses a multi-step process to highlight differences:
+
+<Steps>
+  <Step title="Compute pixel difference">
+    Uses PIL's `ImageChops.difference()` to find pixels that differ between the two pages.
+  </Step>
+  
+  <Step title="Apply threshold">
+    From pdf_visual_diff.py:63:
+    ```python
+    thresholded_diff = diff.point(lambda p: 255 if p > 20 else 0)
+    ```
+    Pixels with differences greater than 20 (out of 255) are marked. This filters out minor noise.
+  </Step>
+  
+  <Step title="Create overlay">
+    Differences are highlighted with a semi-transparent red overlay:
+    ```python
+    drawing_layer = Image.new("RGBA", pil_img1.size, (0,0,0,0))
+    drawing_layer.paste((255,0,0,128), mask=thresholded_diff.convert('L'))
+    ```
+    The `128` alpha value makes the red 50% transparent.
+  </Step>
+  
+  <Step title="Composite final image">
+    The red overlay is composited onto the reference PDF page, showing both the original content and highlighted differences.
+  </Step>
+</Steps>
+
+### Reading diff images
+
+<Tabs>
+  <Tab title="No visible highlights">
+    If a diff image is generated but shows no red highlighting, the SSIM score flagged differences but they're below the visual threshold (20/255). Consider adjusting `--threshold` to be more tolerant.
+  </Tab>
+  
+  <Tab title="Large red areas">
+    Significant portions highlighted in red indicate major visual differences like:
+    - Changed text content
+    - Modified layout
+    - Different fonts or formatting
+    - Added/removed elements
+  </Tab>
+  
+  <Tab title="Small red spots">
+    Tiny red highlights might indicate:
+    - Font rendering differences
+    - Anti-aliasing variations
+    - Minor positioning shifts
+    - Image compression artifacts
+  </Tab>
+</Tabs>
+
+## SSIM scores explained
+
+### What is SSIM?
+
+The Structural Similarity Index (SSIM) measures perceived image quality difference. Unlike pixel-by-pixel comparison, SSIM considers:
+
+- **Luminance**: Overall brightness
+- **Contrast**: Range of tones
+- **Structure**: Spatial patterns and edges
+
+This makes it more robust to minor rendering variations that humans wouldn't perceive as different.
+
+### How the tool uses SSIM
+
+From pdf_visual_diff.py:54:
+
+```python
+similarity = ssim(np_img1, np_img2, channel_axis=-1, data_range=255)
+```
+
+The comparison:
+1. Converts both pages to numpy arrays
+2. Computes SSIM across all color channels (`channel_axis=-1`)
+3. Uses data range 0-255 for 8-bit RGB images
+4. Returns a score between 0.0 (completely different) and 1.0 (identical)
+
+### SSIM in practice
+
+<CodeGroup>
+```python Identical pages
+similarity = 1.0
+# Result: No diff image generated
+```
+
+```python Nearly identical (font rendering)
+similarity = 0.9998
+# Result: With default threshold (1.0), diff image generated
+# With threshold 0.999, considered identical
+```
+
+```python Minor differences (spacing)
+similarity = 0.985
+# Result: Diff image generated, small red highlights
+```
+
+```python Major differences (content change)
+similarity = 0.742
+# Result: Diff image generated, large red areas
+```
+</CodeGroup>
+
+### Threshold decision guide
+
+| Threshold | Use case | Sensitivity |
+|-----------|----------|-------------|
+| `1.0` | Exact match required, catch all changes | Highest |
+| `0.999` | Ignore font rendering variations | High |
+| `0.995` | Tolerate minor PDF generation differences | Medium |
+| `0.99` | Accept small layout shifts | Low |
+| `0.95` | Only flag significant visual changes | Lowest |
+
+<Note>
+  Start with the default `1.0` threshold. If you see false positives from rendering variations, gradually lower it to `0.999` or `0.995`.
+</Note>
+
+## Automating result analysis
+
+### Python example
+
+```python
+import json
+import sys
+
+def analyze_results(results_path):
+    with open(results_path) as f:
+        results = json.load(f)
+    
+    if results['status'] == 'success':
+        print("✓ Visual regression test passed")
+        return 0
+    
+    # Report differences
+    if results['diff_pages']:
+        print(f"✗ Differences on pages: {', '.join(map(str, results['diff_pages']))}")
+    
+    if results['extra_pages']:
+        print(f"✗ Extra pages in {results['extra_pages_in']}: {', '.join(map(str, results['extra_pages']))}")
+    
+    print(f"  Threshold used: {results['threshold']}")
+    print(f"  PDF1: {results['pdf1_pages']} pages")
+    print(f"  PDF2: {results['pdf2_pages']} pages")
+    
+    return 1
+
+if __name__ == '__main__':
+    exit_code = analyze_results('diff_output/latest/results.json')
+    sys.exit(exit_code)
+```
+
+### Bash example
+
+```bash
+#!/bin/bash
+
+RESULTS_FILE="diff_output/$(ls -t diff_output | head -1)/results.json"
+
+STATUS=$(jq -r '.status' "$RESULTS_FILE")
+
+if [ "$STATUS" = "success" ]; then
+    echo "✓ Visual regression test passed"
+    exit 0
+else
+    echo "✗ Visual regression test failed"
+    jq -r '.description' "$RESULTS_FILE"
+    exit 1
+fi
+```
+
+## CI/CD integration
+
+### GitHub Actions example
+
+```yaml
+- name: Run PDF visual regression tests
+  run: |
+    python pdf_visual_diff.py \
+      expected/report.pdf \
+      generated/report.pdf \
+      --output test-results/visual-diff \
+      --threshold 0.999
+
+- name: Check results
+  run: |
+    RESULTS_DIR=$(ls -td test-results/visual-diff/*_diff | head -1)
+    STATUS=$(jq -r '.status' "$RESULTS_DIR/results.json")
+    
+    if [ "$STATUS" != "success" ]; then
+      jq -r '.description' "$RESULTS_DIR/results.json"
+      exit 1
+    fi
+
+- name: Upload diff images
+  if: failure()
+  uses: actions/upload-artifact@v3
+  with:
+    name: visual-diff-results
+    path: test-results/visual-diff/
+```
+
+This workflow:
+1. Runs the comparison with a tolerant threshold
+2. Checks the results.json status
+3. Uploads diff images as artifacts if the test fails

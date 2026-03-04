@@ -1,80 +1,232 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Get started with your first PDF visual regression test in minutes
 ---
 
-## Get started in three steps
+## Basic usage
 
-Get your documentation site running locally and make your first customization.
+The PDF visual regression tester is invoked from the command line using the `pdf_visual_diff.py` script. At minimum, you need to provide two PDF files to compare.
 
-### Step 1: Set up your local environment
+### Command syntax
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+```bash
+python pdf_visual_diff.py <path/to/pdf1.pdf> <path/to/pdf2.pdf> [options]
+```
+
+### Arguments
+
+- `pdf1`: Path to the first PDF file (typically the reference or expected version)
+- `pdf2`: Path to the second PDF file (typically the new or actual version)
+- `--output`: *(Optional)* Directory where diff images will be saved (default: `diff_output`)
+- `--threshold`: *(Optional)* Similarity threshold for SSIM comparison, from 0.0 to 1.0 (default: `1.0`)
+
+<Info>
+  A threshold of `1.0` means pages must be identical. Lower values like `0.999` allow for minor rendering variations.
+</Info>
+
+## Your first comparison
+
+Let's run a simple comparison using the example PDFs included in the repository.
+
+<Steps>
+  <Step title="Navigate to the project directory">
+    Make sure you're in the project root and your virtual environment is activated:
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+    ```bash
+    cd pdf-visual-regression
+    source venv/bin/activate  # On Windows: venv\Scripts\activate
+    ```
+  </Step>
+  
+  <Step title="Run the comparison">
+    Compare two example PDF files:
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+    ```bash
+    python pdf_visual_diff.py example-pdfs/example-working-gov-letter.pdf example-pdfs/example-broken-gov-letter.pdf
+    ```
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
+    This command compares a working government letter template against a broken version.
+  </Step>
+  
+  <Step title="Review the output">
+    If differences are found, you'll see console output like:
+    
+    ```
+    Visual differences found on pages: 1
+    Diff images saved to: /path/to/pdf-visual-regression/diff_output/20261202_171728_diff/
+    ```
+    
+    The output directory contains:
+    - `diff_page_1.png`: Highlighted image showing differences
+    - `results.json`: Detailed comparison metadata
+  </Step>
+</Steps>
+
+## Understanding the results
+
+### When differences are found
+
+The tool generates annotated images with red highlights marking the exact locations of differences:
+
+- **Diff images**: Named `diff_page_N.png` where N is the page number
+- **Console output**: Lists all pages with differences
+- **JSON report**: Contains structured data about the comparison
+
+### When PDFs are identical
+
+If no differences are detected, you'll see:
+
+```
+All pages are visually identical.
+```
+
+No diff images are generated, and the output directory will only contain `results.json` with `"status": "success"`.
+
+<Note>
+  The output directory uses timestamps (e.g., `20261202_171728_diff`) to preserve comparison history and prevent overwriting previous results.
+</Note>
+
+## Custom output directory
+
+Specify a custom directory for saving diff images:
+
+```bash
+python pdf_visual_diff.py document_v1.pdf document_v2.pdf --output my_results
+```
+
+This creates timestamped subdirectories inside `my_results/` (e.g., `my_results/20261202_171728_diff/`).
+
+## Adjusting sensitivity
+
+The `--threshold` parameter controls comparison sensitivity. The default value of `1.0` requires perfect matches.
+
+### Example: Allow minor rendering differences
+
+```bash
+python pdf_visual_diff.py reference.pdf generated.pdf --threshold 0.999
+```
+
+Lower threshold values are useful when:
+- Comparing PDFs generated on different systems
+- Minor font rendering variations are acceptable
+- Anti-aliasing differences should be ignored
+
+<Warning>
+  Setting the threshold too low (e.g., below 0.95) may cause the tool to miss significant visual differences. Start with 0.999 and adjust as needed.
+</Warning>
+
+## Working with the JSON output
+
+Every comparison generates a `results.json` file with detailed metadata:
+
+```json
+{
+  "timestamp": "20261202_171728",
+  "status": "error",
+  "description": "Visual differences found on pages: 1",
+  "pdf1": "/absolute/path/to/pdf1.pdf",
+  "pdf2": "/absolute/path/to/pdf2.pdf",
+  "pdf1_pages": 1,
+  "pdf2_pages": 1,
+  "threshold": 1.0,
+  "identical": false,
+  "diff_pages": [1],
+  "extra_pages": [],
+  "extra_pages_in": null
+}
+```
+
+Key fields:
+- `status`: `"success"` if identical, `"error"` if differences found
+- `identical`: Boolean indicating if PDFs are visually the same
+- `diff_pages`: Array of page numbers with differences
+- `extra_pages`: Pages that exist in only one PDF
+- `extra_pages_in`: Which PDF has extra pages ("PDF1" or "PDF2")
+
+<Info>
+  Parse this JSON file in your CI/CD pipeline to automatically fail builds when visual regressions are detected.
+</Info>
+
+## Handling page count mismatches
+
+When PDFs have different page counts, the tool compares up to the shorter document's length:
+
+```bash
+python pdf_visual_diff.py short_doc.pdf long_doc.pdf
+```
+
+Output:
+```
+Warning: PDFs have different page counts. PDF1: 3 pages, PDF2: 5 pages.
+Comparing up to the lower page count.
+Extra pages only in PDF2: 4, 5
+Diff images saved to: diff_output/20261202_171728_diff/
+```
+
+Extra pages are saved as separate images:
+- `extra_page_4_only_in_pdf2.png`
+- `extra_page_5_only_in_pdf2.png`
+
+## Running tests
+
+Verify your installation by running the included test suite:
+
+```bash
+make test
+```
+
+This command:
+1. Sets up test PDFs using the `create_test_pdfs.py` script
+2. Runs unit tests from `tests/test_diff_script.py`
+3. Validates that the comparison logic works correctly
+
+<Accordion title="Clean up test files">
+  Remove all generated test files and outputs:
+  
+  ```bash
+  make clean
+  ```
+  
+  This removes:
+  - `tests/test_output/` - Test comparison results
+  - `tests/test_pdfs/` - Generated test PDFs
+  - `diff_output/` - Any diff output from manual tests
+  - `__pycache__/` - Python cache files
 </Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+## Integration with CI/CD
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+Integrate the tool into your continuous integration pipeline:
 
-### Step 3: Go live
+```bash
+#!/bin/bash
+# Example CI script
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+python pdf_visual_diff.py expected_output.pdf generated_output.pdf --output test_results
+
+# Check exit code or parse JSON
+if grep -q '"status": "error"' test_results/*/results.json; then
+  echo "Visual regression detected!"
+  exit 1
+fi
+
+echo "PDFs are visually identical"
+exit 0
+```
+
+<Note>
+  The tool prints results to stdout and generates JSON for programmatic access, making it easy to integrate with any CI/CD system.
+</Note>
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
+Now that you've run your first comparison, explore:
 
-<CardGroup cols={2}>
+- Integrate the tool into your testing workflow
+- Set up automated comparisons in your CI/CD pipeline
+- Adjust threshold values for your specific use case
+- Parse JSON output for custom reporting
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+<Info>
+  For questions or issues, refer to the project repository or file an issue on GitHub.
+</Info>

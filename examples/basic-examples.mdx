@@ -1,0 +1,139 @@
+---
+title: Basic examples
+description: Simple PDF comparison scenarios to get started with visual regression testing
+---
+
+## Comparing identical PDFs
+
+The most basic use case is verifying that two PDFs are visually identical. This is useful for regression testing after code changes.
+
+<Steps>
+  <Step title="Run the comparison">
+    ```bash
+    python pdf_visual_diff.py example-pdfs/test1_original.pdf example-pdfs/test1_identical.pdf
+    ```
+  </Step>
+  
+  <Step title="Review the output">
+    When PDFs are identical, you'll see:
+    ```bash
+    All pages are visually identical.
+    ```
+    
+    No diff images are generated, and the tool exits successfully.
+  </Step>
+</Steps>
+
+<Note>
+  When PDFs are identical, no output directory is created since there are no diff images to save.
+</Note>
+
+## Detecting visual differences
+
+When comparing PDFs with visual differences, the tool highlights the changed areas.
+
+```bash
+python pdf_visual_diff.py example-pdfs/example-working-gov-letter.pdf example-pdfs/example-broken-gov-letter.pdf
+```
+
+### Expected output
+
+```bash
+Visual differences found on pages: 1
+Diff images saved to: /path/to/diff_output/20261202_171728_diff/
+```
+
+### What gets generated
+
+The tool creates a timestamped output directory containing:
+
+<CodeGroup>
+```bash Directory structure
+diff_output/20261202_171728_diff/
+├── diff_page_1.png
+└── results.json
+```
+
+```json results.json
+{
+  "timestamp": "20261202_171728",
+  "status": "error",
+  "description": "Visual differences found on pages: 1",
+  "pdf1": "/absolute/path/to/example-working-gov-letter.pdf",
+  "pdf2": "/absolute/path/to/example-broken-gov-letter.pdf",
+  "pdf1_pages": 1,
+  "pdf2_pages": 1,
+  "threshold": 1,
+  "identical": false,
+  "diff_pages": [1],
+  "extra_pages": [],
+  "extra_pages_in": null
+}
+```
+</CodeGroup>
+
+## Specifying output directory
+
+By default, diff images are saved to `diff_output/`. You can customize this location:
+
+```bash
+python pdf_visual_diff.py file1.pdf file2.pdf --output my_custom_output
+```
+
+The tool will create a timestamped subdirectory within your specified output directory:
+
+```bash
+my_custom_output/20261202_171728_diff/
+```
+
+<Accordion title="Why timestamped directories?">
+  Timestamped directories prevent overwriting previous comparison results, allowing you to maintain a history of test runs. The format is `YYYYMMDD_HHMMSS_diff`.
+</Accordion>
+
+## Visual difference highlighting
+
+Differences are highlighted in red on the diff images:
+
+<Tabs>
+  <Tab title="Reference PDF">
+    The original or expected version of your PDF serves as the baseline for comparison.
+    
+    <img src="/images/working.png" alt="Working PDF" />
+  </Tab>
+  
+  <Tab title="Generated PDF">
+    The new or actual version being tested against the reference.
+    
+    <img src="/images/broken.png" alt="Broken PDF" />
+  </Tab>
+  
+  <Tab title="Diff visualization">
+    Changed areas are highlighted with a semi-transparent red overlay.
+    
+    <img src="/images/diff.png" alt="Visual diff" />
+  </Tab>
+</Tabs>
+
+## Command-line help
+
+View all available options:
+
+```bash
+python pdf_visual_diff.py --help
+```
+
+```bash
+usage: pdf_visual_diff.py [-h] [--output OUTPUT] [--threshold THRESHOLD] pdf1 pdf2
+
+Compare two PDFs for visual differences.
+
+positional arguments:
+  pdf1                 Path to the first PDF file.
+  pdf2                 Path to the second PDF file.
+
+optional arguments:
+  -h, --help           show this help message and exit
+  --output OUTPUT      Directory to save difference images.
+  --threshold THRESHOLD
+                       Similarity threshold for SSIM (0.0 to 1.0).
+```

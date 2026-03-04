@@ -1,0 +1,354 @@
+---
+title: Contributing
+description: Learn how to contribute to the PDF visual diff tool and understand the codebase structure
+---
+
+## Getting started
+
+We welcome contributions to improve the PDF visual diff tool! Whether you're fixing bugs, adding features, or improving documentation, your help is appreciated.
+
+### Prerequisites
+
+Before contributing, ensure you have:
+
+- Python 3.7 or higher
+- Git for version control
+- A text editor or IDE
+- Basic understanding of Python and PDF processing
+
+### Initial setup
+
+<Steps>
+  <Step title="Fork and clone the repository">
+    Fork the repository on GitHub and clone your fork locally:
+    
+    ```bash
+    git clone https://github.com/YOUR_USERNAME/pdf-visual-diff.git
+    cd pdf-visual-diff
+    ```
+  </Step>
+  
+  <Step title="Install dependencies">
+    Install the required Python packages:
+    
+    ```bash
+    make install
+    # or
+    python3 -m pip install -r requirements.txt
+    ```
+    
+    Dependencies from `requirements.txt`:
+    - `PyMuPDF` - PDF rendering
+    - `scikit-image` - SSIM algorithm
+    - `Pillow` - Image processing
+    - `numpy` - Numerical operations
+    - `reportlab` - Test PDF generation
+  </Step>
+  
+  <Step title="Run the test suite">
+    Verify your setup by running tests:
+    
+    ```bash
+    make test
+    ```
+    
+    All tests should pass on a fresh installation.
+  </Step>
+</Steps>
+
+## Codebase structure
+
+The project follows a simple, focused structure:
+
+```
+.
+├── pdf_visual_diff.py       # Main script with comparison logic
+├── tests/
+│   ├── test_diff_script.py  # Unittest test cases
+│   ├── create_test_pdfs.py  # Test fixture generator
+│   ├── test_pdfs/           # Generated test PDFs (gitignored)
+│   └── test_output/         # Test results (gitignored)
+├── requirements.txt         # Python dependencies
+├── Makefile                 # Build automation
+└── README.md               # Project documentation
+```
+
+### Core modules
+
+<AccordionGroup>
+  <Accordion title="pdf_visual_diff.py" icon="code">
+    The main entry point containing all comparison logic.
+    
+    **Key functions:**
+    
+    - `compare_pdfs(pdf1_path, pdf2_path, output_dir, threshold)` - Core comparison function (`lines 10-136`)
+    - `main()` - CLI argument parsing and script entry (`lines 137-148`)
+    
+    **Key sections:**
+    
+    - PDF loading and validation (lines 19-30)
+    - Page rendering loop (lines 34-69)
+    - Extra page handling (lines 72-89)
+    - Results generation (lines 97-126)
+  </Accordion>
+  
+  <Accordion title="tests/test_diff_script.py" icon="flask">
+    Integration tests using subprocess to test the CLI.
+    
+    **Test class:**
+    
+    - `TestPdfVisualDiff` - Main test suite with three test methods
+    
+    **Test methods:**
+    
+    - `test_identical_pdfs()` - Verifies identical PDFs pass
+    - `test_different_text_pdfs()` - Checks diff detection
+    - `test_different_page_count_pdfs()` - Tests page count handling
+  </Accordion>
+  
+  <Accordion title="tests/create_test_pdfs.py" icon="file-pdf">
+    Test fixture generator using ReportLab.
+    
+    **Functions:**
+    
+    - `create_test_pdf(filename, text_content)` - Creates a simple one-page PDF
+    - `setup_test_files()` - Generates all test fixtures
+  </Accordion>
+  
+  <Accordion title="Makefile" icon="hammer">
+    Build automation with common development tasks.
+    
+    **Targets:**
+    
+    - `make install` - Install dependencies
+    - `make test` - Run test suite
+    - `make setup` - Generate test PDFs
+    - `make clean` - Remove generated files
+  </Accordion>
+</AccordionGroup>
+
+## Development workflow
+
+### Making changes
+
+<Steps>
+  <Step title="Create a feature branch">
+    Always work on a separate branch:
+    
+    ```bash
+    git checkout -b feature/my-improvement
+    ```
+    
+    Use descriptive branch names:
+    - `feature/add-threshold-auto-detect`
+    - `fix/memory-leak-large-pdfs`
+    - `docs/improve-readme`
+  </Step>
+  
+  <Step title="Make your changes">
+    Edit the relevant files. Common areas:
+    
+    - **Core logic**: Modify `pdf_visual_diff.py`
+    - **Tests**: Add/update `tests/test_diff_script.py`
+    - **Test fixtures**: Update `tests/create_test_pdfs.py`
+    - **Dependencies**: Update `requirements.txt` if needed
+  </Step>
+  
+  <Step title="Test your changes">
+    Run the test suite to ensure nothing broke:
+    
+    ```bash
+    make clean
+    make test
+    ```
+    
+    For manual testing:
+    
+    ```bash
+    python3 pdf_visual_diff.py test1.pdf test2.pdf --output my_test
+    ```
+  </Step>
+  
+  <Step title="Commit your changes">
+    Write clear, descriptive commit messages:
+    
+    ```bash
+    git add .
+    git commit -m "Add auto-threshold detection based on PDF content"
+    ```
+    
+    Good commit messages explain **why**, not just **what**.
+  </Step>
+  
+  <Step title="Push and create a pull request">
+    Push your branch and open a PR:
+    
+    ```bash
+    git push origin feature/my-improvement
+    ```
+    
+    In your PR description:
+    - Explain what problem you're solving
+    - Describe your solution approach
+    - Mention any breaking changes
+    - Include example usage if relevant
+  </Step>
+</Steps>
+
+## Code style guidelines
+
+Follow these conventions to maintain consistency:
+
+### Python style
+
+- Follow [PEP 8](https://www.python.org/dev/peps/pep-0008/) style guide
+- Use 4 spaces for indentation (no tabs)
+- Maximum line length: 100 characters
+- Use descriptive variable names
+- Add docstrings to all functions
+
+**Example:**
+
+```python
+def compare_pdfs(pdf1_path, pdf2_path, output_dir, threshold=0.999):
+    """
+    Compares two PDFs page by page for visual differences.
+    
+    Args:
+        pdf1_path: Path to the first PDF file
+        pdf2_path: Path to the second PDF file
+        output_dir: Directory to save difference images
+        threshold: SSIM threshold (0.0 to 1.0)
+    
+    Returns:
+        None (outputs to console and files)
+    """
+    # Implementation...
+```
+
+### Testing conventions
+
+- Write tests for all new features
+- Use descriptive test method names
+- Include docstrings explaining what each test verifies
+- Follow the Arrange-Act-Assert pattern
+
+**Example:**
+
+```python
+def test_custom_threshold(self):
+    """Test that custom SSIM threshold is respected."""
+    # Arrange
+    pdf1 = "tests/test_pdfs/test1.pdf"
+    pdf2 = "tests/test_pdfs/test2.pdf"
+    
+    # Act
+    result = subprocess.run(
+        ["python3", "pdf_visual_diff.py", pdf1, pdf2, "--threshold", "0.95"],
+        capture_output=True, text=True
+    )
+    
+    # Assert
+    self.assertIn("threshold: 0.95", result.stdout)
+```
+
+## Common contribution areas
+
+### Feature additions
+
+Potential features to implement:
+
+- **Multi-format support**: Export diffs as PDF, HTML reports
+- **Threshold auto-tuning**: Automatically determine optimal threshold
+- **Batch comparison**: Compare multiple PDF pairs
+- **Ignore regions**: Mask specific areas from comparison
+- **Performance optimization**: Parallel page processing
+- **CI/CD integration**: GitHub Actions workflow examples
+
+### Bug fixes
+
+When fixing bugs:
+
+1. Create a test that reproduces the bug
+2. Verify the test fails before your fix
+3. Implement the fix
+4. Verify the test passes
+5. Check that existing tests still pass
+
+### Documentation improvements
+
+- Improve code comments
+- Add usage examples to README
+- Create troubleshooting guides
+- Document edge cases
+
+## Reviewing code
+
+When reviewing contributions, check for:
+
+- **Correctness**: Does it solve the stated problem?
+- **Tests**: Are there tests covering the new code?
+- **Style**: Does it follow project conventions?
+- **Performance**: Are there any obvious bottlenecks?
+- **Documentation**: Are changes documented?
+
+## Release process
+
+For maintainers releasing new versions:
+
+<Steps>
+  <Step title="Update version number">
+    Update version in relevant files (if applicable)
+  </Step>
+  
+  <Step title="Update changelog">
+    Document all changes since last release
+  </Step>
+  
+  <Step title="Run full test suite">
+    ```bash
+    make clean
+    make test
+    ```
+  </Step>
+  
+  <Step title="Tag release">
+    ```bash
+    git tag -a v1.2.0 -m "Release version 1.2.0"
+    git push origin v1.2.0
+    ```
+  </Step>
+  
+  <Step title="Publish release notes">
+    Create GitHub release with changelog and binaries
+  </Step>
+</Steps>
+
+## Getting help
+
+If you need assistance:
+
+- **Issues**: Open a GitHub issue for bugs or feature requests
+- **Discussions**: Use GitHub Discussions for questions
+- **Code review**: Tag maintainers in your PR for review
+
+<Note>
+  Before opening an issue, search existing issues to avoid duplicates. Provide:
+  - Clear description of the problem
+  - Steps to reproduce
+  - Expected vs actual behavior
+  - System information (OS, Python version)
+  - Sample PDFs if applicable (without sensitive data)
+</Note>
+
+## Code of conduct
+
+We expect all contributors to:
+
+- Be respectful and constructive
+- Welcome newcomers and help them get started
+- Focus on what's best for the project and community
+- Accept constructive criticism gracefully
+- Show empathy towards other community members
+
+Thanks for contributing! Every improvement, no matter how small, makes this tool better for everyone.
