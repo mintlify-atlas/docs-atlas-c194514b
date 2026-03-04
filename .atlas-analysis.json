@@ -1,0 +1,57 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "PDF Visual Regression",
+  "projectDescription": "A Python CLI tool for performing visual regression testing on PDF files with page-by-page comparison and difference highlighting.",
+  "theme": "aspen",
+  "primaryColor": "#E63946",
+  "lightColor": "#F1FAEE",
+  "darkColor": "#1D3557",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get Started",
+        "pages": [
+          "introduction",
+          "installation",
+          "quickstart"
+        ]
+      },
+      {
+        "group": "Usage",
+        "pages": [
+          "usage/basic-comparison",
+          "usage/command-reference",
+          "usage/configuration-options",
+          "usage/output-formats"
+        ]
+      },
+      {
+        "group": "Examples",
+        "pages": [
+          "examples/basic-examples",
+          "examples/advanced-scenarios",
+          "examples/interpreting-results"
+        ]
+      },
+      {
+        "group": "Development",
+        "pages": [
+          "development/how-it-works",
+          "development/testing",
+          "development/contributing"
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Page-by-page visual comparison of PDF files",
+    "Structural similarity (SSIM) algorithm for accurate difference detection",
+    "Generates highlighted diff images showing visual changes",
+    "Command-line interface with configurable output and threshold options",
+    "Handles PDFs with different page counts gracefully"
+  ],
+  "publicApiSurface": [
+    "compare_pdfs(pdf1_path, pdf2_path, output_dir, threshold)",
+    "python pdf_visual_diff.py <pdf1> <pdf2> [--output] [--threshold]"
+  ]
+}
